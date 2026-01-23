@@ -1,0 +1,51 @@
+joint_velocity_to_position_controller:
+
+  joints: {
+    type: string_array,
+    default_value: [],
+    description: "Joint names to control",
+    read_only: true,
+    validation: {
+      unique<>: null,
+    }
+  }
+
+  command_interfaces: {
+    type: string_array,
+    default_value: [],
+    description: "Command interfaces provided by the hardware interface for all joints",
+    read_only: true,
+    validation: {
+      unique<>: null,
+      subset_of<>: [["position"]],
+    }
+  }
+
+  state_interfaces: {
+    type: string_array,
+    default_value: [],
+    description: "State interfaces provided by the hardware interface for all joints.",
+    read_only: true,
+    validation: {
+      unique<>: null,
+      subset_of<>: [["position", "velocity"]],
+    }
+  }
+
+  max_acceleration: {
+      type: double,
+      default_value: 0.5,
+      description: "Maximum acceleration for smooth velocity change transitions",
+  }
+
+  open_loop: {
+      type: bool,
+      default_value: false,
+      description: "Defines if the controller uses the state to calculate the next joint position (false) or the previous commnand (true)",
+  }
+
+  feedback: {
+      type: bool,
+      default_value: false,
+      description: "Defines if the controller publishes the joint positions and velocities (true) or not (false)",
+  }

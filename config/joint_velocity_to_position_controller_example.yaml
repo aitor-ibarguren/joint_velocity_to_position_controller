@@ -1,0 +1,25 @@
+controller_manager:
+  ros__parameters:
+    use_sim_time: true
+    update_rate: 100  # Hz
+
+    joint_velocity_to_position_controller:
+      type: position_controllers/JointVelocityToPositionController
+
+joint_velocity_to_position_controller:
+  ros__parameters:
+    joints:
+      - ur_shoulder_pan_joint
+      - ur_shoulder_lift_joint
+      - ur_elbow_joint
+      - ur_wrist_1_joint
+      - ur_wrist_2_joint
+      - ur_wrist_3_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    max_acceleration: 0.5
+    open_loop: true
+    feedback: true
