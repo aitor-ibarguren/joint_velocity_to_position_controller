@@ -20,8 +20,7 @@ jobs:
         run: |
           cd ..
           mkdir -p ros_ws/src
-          cp -r $GITHUB_WORKSPACE/ros2_rag ros_ws/src
-          cp -r $GITHUB_WORKSPACE/ros2_rag_msgs ros_ws/src
+          cp -r $GITHUB_WORKSPACE ros_ws/src
 
       # 3. Install dependencies with rosdep
       - name: Install dependencies
