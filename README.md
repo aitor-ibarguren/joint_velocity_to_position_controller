@@ -1,5 +1,14 @@
 # Joint Velocity To Position Controller
 
+<p>
+  <a href="https://github.com/aitor-ibarguren/joint_velocity_to_position_controller/actions/workflows/ros2_rolling_ci.yml">
+    <img src="https://github.com/aitor-ibarguren/joint_velocity_to_position_controller/actions/workflows/ros2_rolling_ci.yml/badge.svg" alt="Build">
+  </a>
+  <a href="https://github.com/aitor-ibarguren/joint_velocity_to_position_controller/actions/workflows/ros2_jazzy_ci.yml">
+    <img src="https://github.com/aitor-ibarguren/joint_velocity_to_position_controller/actions/workflows/ros2_jazzy_ci.yml/badge.svg" alt="Build">
+  </a>
+</p>
+
 The `position_controllers/JointVelocityToPositionController` is a ROS 2 controller designed to receive joint velocity commands and convert them to joint positions. This controller extendens the `velocity_controllers/JointGroupVelocityController` controller while exposing a position command interface to the hardware. This allows robots with position-controlled drivers to be commanded using joint velocity inputs, with smooth and continuous motion generation.
 
 ## Features
