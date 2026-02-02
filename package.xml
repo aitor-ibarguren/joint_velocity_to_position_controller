@@ -21,7 +21,7 @@
   <depend>generate_parameter_library</depend>
   <depend>hardware_interface</depend>
   <depend>kdl_parser</depend>
-  <depend>orocos_kdl</depend>
+  <depend>liborocos-kdl-dev</depend>
   <depend>pluginlib</depend>
   <depend>realtime_tools</depend>
 
