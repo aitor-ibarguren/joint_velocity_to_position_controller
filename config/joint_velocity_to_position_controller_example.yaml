@@ -22,4 +22,8 @@ joint_velocity_to_position_controller:
       - velocity
     max_acceleration: 0.5
     open_loop: true
-    feedback: true
+    feedback:
+      active: true
+      cartesian_pose: true
+      base_link: ur_base_link
+      tip_link: ur_tool0

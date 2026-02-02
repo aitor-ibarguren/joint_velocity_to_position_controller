@@ -15,6 +15,8 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   controller_interface
   geometry_msgs
   hardware_interface
+  kdl_parser
+  orocos_kdl
   pluginlib
 )
 

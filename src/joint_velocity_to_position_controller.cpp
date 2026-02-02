@@ -120,7 +120,7 @@ controller_interface::CallbackReturn JointVelocityToPositionController::on_confi
   // Get joint limits
   if (!get_joint_limits(joint_names_))
   {
-    RCLCPP_ERROR(get_node()->get_logger(), "Error retrieving joint limits from URDF");
+    RCLCPP_ERROR(get_node()->get_logger(), "Error retrieving kinematic info from URDF");
     return controller_interface::CallbackReturn::ERROR;
   }
 
@@ -140,7 +140,25 @@ controller_interface::CallbackReturn JointVelocityToPositionController::on_confi
   open_loop_ = params_.open_loop;
 
   // Get feedback
-  feedback_ = params_.feedback;
+  feedback_active_ = params_.feedback.active;
+  feedback_cart_pose_active_ = params_.feedback.cartesian_pose;
+
+  if (feedback_active_ && feedback_cart_pose_active_)
+  {
+    // Get base and tip links
+    base_link_ = params_.feedback.base_link;
+    tip_link_ = params_.feedback.tip_link;
+
+    // Set q
+    q_ = KDL::JntArray(joint_names_.size());
+
+    // Get kinematic info
+    if (!get_fk_solver(base_link_, tip_link_))
+    {
+      RCLCPP_ERROR(get_node()->get_logger(), "Error generating FK solver from URDF");
+      return controller_interface::CallbackReturn::ERROR;
+    }
+  }
 
   // Log
   for (size_t i = 0; i < joint_names_.size(); i++)
@@ -153,8 +171,20 @@ controller_interface::CallbackReturn JointVelocityToPositionController::on_confi
   }
 
   RCLCPP_INFO(get_node()->get_logger(), "╠═ Max. acceleration: %f", max_acceleration_);
-  RCLCPP_INFO(get_node()->get_logger(), "╠═ Open loop %s", open_loop_ ? "ACTIVE" : "INACTIVE");
-  RCLCPP_INFO(get_node()->get_logger(), "╚═ Feedback %s", feedback_ ? "ACTIVE" : "INACTIVE");
+  RCLCPP_INFO(get_node()->get_logger(), "╠═ Open loop: %s", open_loop_ ? "ACTIVE" : "INACTIVE");
+  RCLCPP_INFO(
+    get_node()->get_logger(), "╠═ Feedback: %s", feedback_active_ ? "ACTIVE" : "INACTIVE");
+  RCLCPP_INFO(
+    get_node()->get_logger(), "╚═ Feedback - Cartesian pose: %s",
+    feedback_active_ && feedback_cart_pose_active_ ? "ACTIVE" : "INACTIVE");
+  if (!feedback_active_ && feedback_cart_pose_active_)
+    RCLCPP_WARN(
+      get_node()->get_logger(),
+      "WARNING: Cartesian pose feedback disabled, activate feedback param to enable it");
+  if (feedback_active_ && feedback_cart_pose_active_)
+    RCLCPP_INFO(
+      get_node()->get_logger(), "Cartesian pose from '%s' to '%s'", base_link_.c_str(),
+      tip_link_.c_str());
 
   // Create subscriber & publisher
   joint_velocity_cmd_subs_ = get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
@@ -162,7 +192,7 @@ controller_interface::CallbackReturn JointVelocityToPositionController::on_confi
     std::bind(
       &JointVelocityToPositionController::joint_vel_cmd_callback, this, std::placeholders::_1));
 
-  if (feedback_)
+  if (feedback_active_)
   {
     feedback_pub_ = get_node()->create_publisher<std_msgs::msg::Float64MultiArray>(
       std::string(get_node()->get_name()) + "/feedback", rclcpp::SystemDefaultsQoS());
@@ -322,7 +352,7 @@ controller_interface::return_type JointVelocityToPositionController::update(
   }
 
   // Manage feedback
-  if (feedback_) publish_feedback(joint_positions_, joint_position_commands_);
+  if (feedback_active_) publish_feedback(joint_positions_, joint_position_commands_);
 
   // Store prev. joint velocities
   joint_velocities_prev_ = joint_velocities_limited;
@@ -403,6 +433,71 @@ bool JointVelocityToPositionController::get_joint_limits(
   return true;
 }
 
+bool JointVelocityToPositionController::get_fk_solver(
+  const std::string & base_link, const std::string & tip_link)
+{
+  // Get URDF
+  const std::string & urdf = get_robot_description();
+
+  // Init model
+  if (!model_.initString(urdf))
+  {
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed parsing URDF");
+    return false;
+  }
+
+  // Init tree
+  if (!kdl_parser::treeFromUrdfModel(model_, tree_))
+  {
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to construct KDL tree");
+    return false;
+  }
+
+  // Get kinematic chain
+  if (!tree_.getChain(base_link, tip_link, chain_))
+  {
+    RCLCPP_ERROR(
+      get_node()->get_logger(), "Failed to get KDL chain from '%s' to '%s'", base_link.c_str(),
+      tip_link.c_str());
+    return false;
+  }
+
+  // Check joint number
+  if (chain_.getNrOfJoints() != joint_names_.size())
+  {
+    RCLCPP_ERROR(
+      get_node()->get_logger(),
+      "Provided joint list (%d) and the number of joints of the KDL chain (%d) are not equal",
+      (int)joint_names_.size(), chain_.getNrOfJoints());
+    return false;
+  }
+
+  // Check if joint names are in the chain order
+  int j_number = 0;
+  for (size_t i = 0; i < chain_.getNrOfSegments(); i++)
+  {
+    const KDL::Joint & joint = chain_.getSegment(i).getJoint();
+    if (joint.getType() != KDL::Joint::None)
+    {
+      // Check if same joint name
+      if (joint.getName() != joint_names_[j_number])
+      {
+        RCLCPP_ERROR(
+          get_node()->get_logger(), "Joint number %d names ('%s' and '%s') are not equal", (int)i,
+          joint.getName().c_str(), joint_names_[j_number].c_str());
+        return false;
+      }
+
+      j_number++;
+    }
+  }
+
+  // FK solver
+  fk_solver_ = std::make_shared<KDL::ChainFkSolverPos_recursive>(chain_);
+
+  return true;
+}
+
 void JointVelocityToPositionController::read_joint_state(
   Eigen::VectorXd & joint_positions, Eigen::VectorXd & joint_velocities)
 {
@@ -479,6 +574,29 @@ void JointVelocityToPositionController::publish_feedback(
   feedback_msg.data.insert(
     feedback_msg.data.end(), joint_velocities.data(),
     joint_velocities.data() + joint_velocities.size());
+
+  // Insert Cartesian pose (if required)
+  if (feedback_active_ && feedback_cart_pose_active_)
+  {
+    // Insert joint positions
+    for (int i = 0; i < joint_position_commands.size(); i++) q_(i) = joint_position_commands[i];
+
+    // Get Cartesian pose
+    KDL::Frame cart_pose;
+    fk_solver_->JntToCart(q_, cart_pose);
+
+    // Insert translation
+    feedback_msg.data.push_back(cart_pose.p.x());
+    feedback_msg.data.push_back(cart_pose.p.y());
+    feedback_msg.data.push_back(cart_pose.p.z());
+    // Insert rotation
+    double qx, qy, qz, qw;
+    cart_pose.M.GetQuaternion(qx, qy, qz, qw);
+    feedback_msg.data.push_back(qx);
+    feedback_msg.data.push_back(qy);
+    feedback_msg.data.push_back(qz);
+    feedback_msg.data.push_back(qw);
+  }
 
   // Publish
   feedback_pub_rt_->try_publish(feedback_msg);

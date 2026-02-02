@@ -37,6 +37,9 @@
 
 // Kinematics
 #include "urdf/model.h"
+// KDL
+#include <kdl/chainfksolverpos_recursive.hpp>
+#include <kdl_parser/kdl_parser.hpp>
 
 namespace position_controllers
 {
@@ -93,7 +96,16 @@ protected:
   bool open_loop_;
 
   // Feedback vars
-  bool feedback_;
+  bool feedback_active_;
+  bool feedback_cart_pose_active_;
+  std::string base_link_, tip_link_;
+
+  // KDL
+  KDL::JntArray q_;
+  urdf::Model model_;
+  KDL::Tree tree_;
+  KDL::Chain chain_;
+  std::shared_ptr<KDL::ChainFkSolverPos_recursive> fk_solver_;
 
   // Subscribers
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr joint_velocity_cmd_subs_;
@@ -107,6 +119,7 @@ protected:
 
   // Helper functions
   bool get_joint_limits(const std::vector<std::string> & joint_names);
+  bool get_fk_solver(const std::string & base_link, const std::string & tip_link);
   void read_joint_state(Eigen::VectorXd & joint_positions, Eigen::VectorXd & joint_velocities);
   Eigen::VectorXd limit_velocity(
     const Eigen::VectorXd & joint_velocity_commands, const Eigen::VectorXd & joint_velocities_prev,
