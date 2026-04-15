@@ -56,7 +56,7 @@ JointVelocityToPositionController::command_interface_configuration() const
 
   // Reserve space for command interfaces
   conf.names.reserve(dof_ * params_.command_interfaces.size());
-  for (const auto & joint_name : joint_names_)
+  for (const auto & joint_name : command_joint_names_)
   {
     for (const auto & interface_type : params_.command_interfaces)
     {
@@ -122,6 +122,16 @@ controller_interface::CallbackReturn JointVelocityToPositionController::on_confi
   {
     RCLCPP_ERROR(get_node()->get_logger(), "Error retrieving kinematic info from URDF");
     return controller_interface::CallbackReturn::ERROR;
+  }
+
+  // Command joints
+  command_joint_names_ = params_.command_joints;
+
+  if (command_joint_names_.empty())
+  {
+    command_joint_names_ = params_.joints;
+    RCLCPP_INFO(get_node()->get_logger(),
+                "No specific joint names are used for command interfaces. Using 'joints' parameter.");
   }
 
   // Get & verify maximum acceleration
