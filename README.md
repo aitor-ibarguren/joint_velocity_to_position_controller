@@ -1,9 +1,6 @@
 # Joint Velocity To Position Controller
 
 <p>
-  <a href="https://github.com/aitor-ibarguren/joint_velocity_to_position_controller/actions/workflows/ros2_rolling_ci.yml">
-    <img src="https://github.com/aitor-ibarguren/joint_velocity_to_position_controller/actions/workflows/ros2_rolling_ci.yml/badge.svg" alt="Build">
-  </a>
   <a href="https://github.com/aitor-ibarguren/joint_velocity_to_position_controller/actions/workflows/ros2_jazzy_ci.yml">
     <img src="https://github.com/aitor-ibarguren/joint_velocity_to_position_controller/actions/workflows/ros2_jazzy_ci.yml/badge.svg" alt="Build">
   </a>
