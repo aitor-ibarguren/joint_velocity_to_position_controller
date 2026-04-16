@@ -79,6 +79,8 @@ protected:
   double max_acceleration_;
 
   // Robot state
+  std::vector<std::string> command_joint_names_;
+
   Eigen::VectorXd joint_positions_;
   Eigen::VectorXd joint_velocities_;
 

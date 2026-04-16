@@ -56,7 +56,7 @@ JointVelocityToPositionController::command_interface_configuration() const
 
   // Reserve space for command interfaces
   conf.names.reserve(dof_ * params_.command_interfaces.size());
-  for (const auto & joint_name : joint_names_)
+  for (const auto & joint_name : command_joint_names_)
   {
     for (const auto & interface_type : params_.command_interfaces)
     {
@@ -124,6 +124,17 @@ controller_interface::CallbackReturn JointVelocityToPositionController::on_confi
     return controller_interface::CallbackReturn::ERROR;
   }
 
+  // Command joints
+  command_joint_names_ = params_.command_joints;
+
+  if (command_joint_names_.empty())
+  {
+    command_joint_names_ = params_.joints;
+    RCLCPP_INFO(
+      get_node()->get_logger(),
+      "No specific joint names are used for command interfaces. Using 'joints' parameter.");
+  }
+
   // Get & verify maximum acceleration
   max_acceleration_ = params_.max_acceleration;
 
@@ -169,7 +180,15 @@ controller_interface::CallbackReturn JointVelocityToPositionController::on_confi
       upper_joint_limits_[i]);
     RCLCPP_INFO(get_node()->get_logger(), "║  ╰─ Velocity: %f", vel_joint_limits_[i]);
   }
-
+  if (!params_.command_joints.empty())
+  {
+    RCLCPP_INFO(get_node()->get_logger(), "╠═ Command joints");
+    for (size_t i = 0; i < command_joint_names_.size() - 1; i++)
+      RCLCPP_INFO(get_node()->get_logger(), "║  ├─ %s", command_joint_names_[i].c_str());
+    RCLCPP_INFO(
+      get_node()->get_logger(), "║  ╰─ %s",
+      command_joint_names_[command_joint_names_.size() - 1].c_str());
+  }
   RCLCPP_INFO(get_node()->get_logger(), "╠═ Max. acceleration: %f", max_acceleration_);
   RCLCPP_INFO(get_node()->get_logger(), "╠═ Open loop: %s", open_loop_ ? "ACTIVE" : "INACTIVE");
   RCLCPP_INFO(

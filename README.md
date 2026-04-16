@@ -1,9 +1,6 @@
 # Joint Velocity To Position Controller
 
 <p>
-  <a href="https://github.com/aitor-ibarguren/joint_velocity_to_position_controller/actions/workflows/ros2_rolling_ci.yml">
-    <img src="https://github.com/aitor-ibarguren/joint_velocity_to_position_controller/actions/workflows/ros2_rolling_ci.yml/badge.svg" alt="Build">
-  </a>
   <a href="https://github.com/aitor-ibarguren/joint_velocity_to_position_controller/actions/workflows/ros2_jazzy_ci.yml">
     <img src="https://github.com/aitor-ibarguren/joint_velocity_to_position_controller/actions/workflows/ros2_jazzy_ci.yml/badge.svg" alt="Build">
   </a>
@@ -66,6 +63,51 @@ Besides the typical *joints*, *command_interfaces*, and *command_interfaces*, th
   * **tip_link:** Base link of the kinematic chain used for the Cartesian pose feedback.
 
 > **⚠️ Important:** When the **cartesian_pose** is enabled, the controller verifies that the kinematic chain between the base and tip link includes all the joints of the list and in the same order. If there are discrepancies, the configuration of the controller fails.
+
+### Chained Controller Configuration
+
+In order to use the controller in a controller chain, the optional **command_joints** parameter allows defining specific command interfaces to link them to the next controller of the chain.
+
+The next lines show a snippet of the *YAML* file defining the configuration of the `position_controllers/JointVelocityToPositionController` controller in a chain for a UR16e robot:
+
+```yaml
+controller_manager:
+  ros__parameters:
+    use_sim_time: true
+    update_rate: 100  # Hz
+
+    joint_velocity_to_position_controller:
+      type: position_controllers/JointVelocityToPositionController
+
+joint_velocity_to_position_controller:
+  ros__parameters:
+    joints:
+      - ur_shoulder_pan_joint
+      - ur_shoulder_lift_joint
+      - ur_elbow_joint
+      - ur_wrist_1_joint
+      - ur_wrist_2_joint
+      - ur_wrist_3_joint
+    command_joints:
+      - chained_controller/ur_shoulder_pan_joint
+      - chained_controller/ur_shoulder_lift_joint
+      - chained_controller/ur_elbow_joint
+      - chained_controller/ur_wrist_1_joint
+      - chained_controller/ur_wrist_2_joint
+      - chained_controller/ur_wrist_3_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    max_acceleration: 0.5
+    open_loop: true
+    feedback:
+      active: true
+      cartesian_pose: true
+      base_link: ur_base_link
+      tip_link: ur_tool0
+```
 
 ## License
 
